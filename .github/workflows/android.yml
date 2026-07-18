@@ -1,3 +1,4 @@
+
 name: Build MEV-AI APK
 
 on:
@@ -37,7 +38,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --warning-mode all
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
