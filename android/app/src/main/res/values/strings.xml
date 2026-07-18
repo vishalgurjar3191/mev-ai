@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">mev-ai</string>
+    <string name="title_activity_main">mev-ai</string>
+    <string name="package_name">com.mastar.ev</string>
+    <string name="custom_url_scheme">com.mastar.ev</string>
+</resources>

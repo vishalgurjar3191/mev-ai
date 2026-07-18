@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B0B0B" />
+    <title>MEV AI — Intelligence Without Limits</title>
+    <meta name="description" content="MEV AI is a premium AI platform for chat, image generation, voice, PDF understanding, code assistance and web search — all in one place." />
+    <meta name="keywords" content="MEV AI, AI chat, AI platform, image generation, voice AI, PDF AI, code assistant" />
+    <meta property="og:title" content="MEV AI — Intelligence Without Limits" />
+    <meta property="og:description" content="A premium, unified AI platform for chat, image, voice, PDF and code." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-obsidian text-paper font-body antialiased">
+    <script>
+      (function () {
+        var t = localStorage.getItem('mev-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (t === 'amoled') document.documentElement.classList.add('amoled');
+        else if (t === 'light') document.documentElement.classList.add('light');
+        else if (t === 'auto' || !t) {
+          if (!prefersDark) document.documentElement.classList.add('light');
+        }
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

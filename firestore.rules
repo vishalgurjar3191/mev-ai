@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users can read/update their own profile but can never grant themselves
+    // admin, change their plan, or change the banned flag from the client —
+    // those fields only change via a trusted backend (Cloud Function) or the admin panel.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
+        request.resource.data.role == 'user' &&
+        request.resource.data.plan == 'free' &&
+        request.resource.data.banned == false;
+      allow update: if isOwner(uid) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.plan == resource.data.plan &&
+        request.resource.data.banned == resource.data.banned;
+      allow update, delete: if isAdmin();
+    }
+
+    // Each user's chats are private to them; admins can read for support/moderation.
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      allow read, write: if isSignedIn() &&
+        get(/databases/$(database)/documents/chats/$(chatId)).data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    // Each user's generated image history is private to them.
+    match /images/{imageId} {
+      allow read, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    // Admin-only collections
+    match /coupons/{couponId} { allow read, write: if isAdmin(); }
+    match /announcements/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /support_tickets/{ticketId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+    match /logs/{logId} { allow read: if isAdmin(); allow write: if false; }
+
+    // Pricing plans: anyone can read (needed for the pricing page + checkout), only admins edit.
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin-managed voice catalog: readable by any signed-in user (Settings page voice picker),
+    // only admins can add/edit/remove entries.
+    match /voices/{voiceId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Payment records are only ever written by the Cloud Functions backend (Admin SDK bypasses
+    // these rules entirely), never directly by a client — that's what keeps them trustworthy.
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "mev-ai-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure backend for MEV AI: Razorpay order creation/verification and admin-only operations. Must run server-side — never move this logic into the client app.",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0",
+    "razorpay": "^2.9.4"
+  }
+}
