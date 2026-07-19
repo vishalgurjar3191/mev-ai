@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "364488873663",
+    "firebase_url": "https://mev-ai-655d0-default-rtdb.firebaseio.com",
+    "project_id": "mev-ai-655d0",
+    "storage_bucket": "mev-ai-655d0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364488873663:android:572413d6c2bdc25492980a",
+        "android_client_info": {
+          "package_name": "com.mastar.ev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "364488873663-mqhasgjknph43ru1ovgfj35rro9jh7cl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjI424vr0sR0Gu7HNE7vMxHPQft6hlCv4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "364488873663-mqhasgjknph43ru1ovgfj35rro9jh7cl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
