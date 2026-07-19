@@ -19,6 +19,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create .env
+        run: |
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
+          echo "VITE_OPENROUTER_API_KEY=${{ secrets.VITE_OPENROUTER_API_KEY }}" >> .env
+          echo "VITE_OPENROUTER_MODEL=${{ secrets.VITE_OPENROUTER_MODEL }}" >> .env
+          echo "VITE_ELEVENLABS_API_KEY=${{ secrets.VITE_ELEVENLABS_API_KEY }}" >> .env
+
       - name: Build Vite app
         run: npm run build
 
