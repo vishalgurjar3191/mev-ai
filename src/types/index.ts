@@ -15,6 +15,8 @@ export interface UserProfile {
   language?: string;
   theme?: 'matte' | 'amoled' | 'light' | 'auto';
   preferredVoice?: string;
+  /** Compact long-term memory summary, updated after each finished chat. */
+  memory?: string;
 }
 
 export interface AuthFormErrors {

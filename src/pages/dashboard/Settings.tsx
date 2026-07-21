@@ -8,7 +8,6 @@ import { useAuth, applyTheme, ThemeChoice } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
 import { listChats } from '../../lib/chatStore';
 import { friendlyFirebaseError, passwordStrength } from '../../utils/validators';
-import { getVoiceProfiles, speak, isSpeechSynthesisSupported, VoiceProfile } from '../../lib/voice';
 import { REALISTIC_VOICES, hasElevenLabsKey, speakRealistic, RealisticVoice } from '../../lib/ttsClient';
 import { listAdminVoices } from '../../lib/adminVoices';
 
@@ -55,10 +54,7 @@ export default function Settings() {
   const [language, setLanguage] = useState('en');
   const [saved, setSaved] = useState(false);
 
-  const [voicePresets, setVoicePresets] = useState<{ female: VoiceProfile[]; male: VoiceProfile[] }>({ female: [], male: [] });
   const [realisticVoices, setRealisticVoices] = useState<RealisticVoice[]>(REALISTIC_VOICES);
-  const [singleVoiceDevice, setSingleVoiceDevice] = useState(false);
-  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [previewingVoice, setPreviewingVoice] = useState<string>('');
 
@@ -76,7 +72,7 @@ export default function Settings() {
       setNotifications(!!profile.notificationsEnabled);
       setLanguage(profile.language ?? 'en');
       try {
-        const parsed = profile.preferredVoice ? (JSON.parse(profile.preferredVoice) as VoiceProfile) : null;
+        const parsed = profile.preferredVoice ? (JSON.parse(profile.preferredVoice) as { id?: string }) : null;
         setSelectedVoice(parsed?.id ?? '');
       } catch {
         setSelectedVoice('');
@@ -91,43 +87,9 @@ export default function Settings() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!isSpeechSynthesisSupported()) return;
-    getVoiceProfiles().then((result) => {
-      setVoicePresets({ female: result.female, male: result.male });
-      setSingleVoiceDevice(result.singleVoiceDevice);
-      setVoicesLoaded(true);
-      if (!result.female.length && !result.male.length) {
-        window.speechSynthesis.getVoices();
-        setTimeout(() => {
-          getVoiceProfiles().then((retry) => {
-            setVoicePresets({ female: retry.female, male: retry.male });
-            setSingleVoiceDevice(retry.singleVoiceDevice);
-          });
-        }, 500);
-      }
-    });
-  }, []);
-
-  const handleVoiceSelect = (voiceProfile: VoiceProfile) => {
-    const json = JSON.stringify(voiceProfile);
-    setSelectedVoice(voiceProfile.id);
-    void persist({ preferredVoice: json });
-  };
-
-  const handleVoicePreview = (voiceProfile: VoiceProfile) => {
-    setPreviewingVoice(voiceProfile.id);
-    void speak('Hi, this is how I sound. Let me know if you like this voice.', 'en-US', () => setPreviewingVoice(''), {
-      voiceURI: voiceProfile.voiceURI,
-      pitch: voiceProfile.pitch,
-      rate: voiceProfile.rate,
-    });
-  };
-
   const handleRealisticSelect = (v: RealisticVoice) => {
-    const profile: VoiceProfile = { id: v.id, label: v.label, gender: v.gender, pitch: 1, rate: 1, elevenLabsVoiceId: v.elevenLabsVoiceId };
-    setSelectedVoice(profile.id);
-    void persist({ preferredVoice: JSON.stringify(profile) });
+    setSelectedVoice(v.id);
+    void persist({ preferredVoice: JSON.stringify({ id: v.id, label: v.label, gender: v.gender, elevenLabsVoiceId: v.elevenLabsVoiceId }) });
   };
 
   const handleRealisticPreview = (v: RealisticVoice) => {
@@ -247,110 +209,51 @@ export default function Settings() {
           <p className="text-xs text-ink/40 mt-3">Auto follows your phone's system dark/light setting automatically. AMOLED gives a pure black background for OLED screens.</p>
         </GlassCard>
 
-        {isSpeechSynthesisSupported() && (
-          <GlassCard className="p-6 mb-6">
-            {hasElevenLabsKey() ? (
-              <>
-                <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-1">Realistic Voice</h2>
-                <p className="text-xs text-ink/40 mb-4">Human-sounding voices powered by ElevenLabs. Pick one to use everywhere replies are read aloud.</p>
-                <div className="space-y-4">
-                  {(['female', 'male'] as const).map((gender) => (
-                    <div key={gender}>
-                      <p className="text-xs text-ink/40 uppercase tracking-wide mb-2">{gender === 'female' ? 'Female' : 'Male'}</p>
-                      <div className="space-y-2">
-                        {realisticVoices.filter((v) => v.gender === gender).map((v) => (
-                          <div
-                            key={v.id}
-                            className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 border transition-colors ${
-                              selectedVoice === v.id ? 'border-gold/50 bg-gold/10' : 'border-ink/[0.06] hover:bg-ink/[0.04]'
-                            }`}
-                          >
-                            <button onClick={() => handleRealisticSelect(v)} className="flex-1 text-left text-sm text-paper truncate">
-                              {v.label}
-                            </button>
-                            <button
-                              onClick={() => handleRealisticPreview(v)}
-                              className="shrink-0 w-8 h-8 rounded-lg glass flex items-center justify-center text-ink/50 hover:text-gold"
-                              aria-label={`Preview ${v.label}`}
-                            >
-                              {previewingVoice === v.id ? <Volume2 size={14} className="animate-pulse" /> : <Play size={13} />}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-1">Realistic Voice</h2>
-                <p className="text-xs text-ink/40">
-                  For a genuinely human-sounding voice (not the robotic default below), add a free ElevenLabs API key as{' '}
-                  <code className="text-gold">VITE_ELEVENLABS_API_KEY</code> in your <code className="text-gold">.env</code> file
-                  and restart the app. Free tier: ~10,000 characters/month, no card needed. Get a key at{' '}
-                  <span className="text-gold">elevenlabs.io</span>.
-                </p>
-              </>
-            )}
-          </GlassCard>
-        )}
-
-        {isSpeechSynthesisSupported() && (
-          <GlassCard className="p-6 mb-6">
-            <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-1">Voice (device fallback)</h2>
-            <p className="text-xs text-ink/40 mb-2">
-              Pick which voice reads replies aloud. These are tuned from your phone/browser's built-in text-to-speech engine.
-            </p>
-            {voicesLoaded && singleVoiceDevice && (
-              <p className="text-xs text-gold/80 mb-4">
-                Heads up: your device seems to only have one installed TTS voice, so these 6 options differ in pitch/pace rather
-                than being 6 fully distinct voices. For more variety, install extra voices under Android Settings → System →
-                Languages &amp; input → Text-to-speech.
-              </p>
-            )}
-
-            {!voicesLoaded ? (
-              <p className="text-xs text-ink/40">Loading voices…</p>
-            ) : voicePresets.female.length === 0 && voicePresets.male.length === 0 ? (
-              <p className="text-xs text-ink/40">
-                No installed text-to-speech voices found on this device/browser. On Android, check Settings → System →
-                Languages → Text-to-speech, and make sure a TTS engine (like Google Speech Services) is installed.
-              </p>
-            ) : (
+        <GlassCard className="p-6 mb-6">
+          {hasElevenLabsKey() ? (
+            <>
+              <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-1">Realistic Voice</h2>
+              <p className="text-xs text-ink/40 mb-4">Human-sounding voices powered by ElevenLabs. Pick one to use everywhere replies are read aloud.</p>
               <div className="space-y-4">
-                {(['female', 'male'] as const).map((gender) =>
-                  voicePresets[gender].length ? (
-                    <div key={gender}>
-                      <p className="text-xs text-ink/40 uppercase tracking-wide mb-2">{gender === 'female' ? 'Female' : 'Male'}</p>
-                      <div className="space-y-2">
-                        {voicePresets[gender].map((v) => (
-                          <div
-                            key={v.id}
-                            className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 border transition-colors ${
-                              selectedVoice === v.id ? 'border-gold/50 bg-gold/10' : 'border-ink/[0.06] hover:bg-ink/[0.04]'
-                            }`}
+                {(['female', 'male'] as const).map((gender) => (
+                  <div key={gender}>
+                    <p className="text-xs text-ink/40 uppercase tracking-wide mb-2">{gender === 'female' ? 'Female' : 'Male'}</p>
+                    <div className="space-y-2">
+                      {realisticVoices.filter((v) => v.gender === gender).map((v) => (
+                        <div
+                          key={v.id}
+                          className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 border transition-colors ${
+                            selectedVoice === v.id ? 'border-gold/50 bg-gold/10' : 'border-ink/[0.06] hover:bg-ink/[0.04]'
+                          }`}
+                        >
+                          <button onClick={() => handleRealisticSelect(v)} className="flex-1 text-left text-sm text-paper truncate">
+                            {v.label}
+                          </button>
+                          <button
+                            onClick={() => handleRealisticPreview(v)}
+                            className="shrink-0 w-8 h-8 rounded-lg glass flex items-center justify-center text-ink/50 hover:text-gold"
+                            aria-label={`Preview ${v.label}`}
                           >
-                            <button onClick={() => handleVoiceSelect(v)} className="flex-1 text-left text-sm text-paper truncate">
-                              {v.label}
-                            </button>
-                            <button
-                              onClick={() => handleVoicePreview(v)}
-                              className="shrink-0 w-8 h-8 rounded-lg glass flex items-center justify-center text-ink/50 hover:text-gold"
-                              aria-label={`Preview ${v.label}`}
-                            >
-                              {previewingVoice === v.id ? <Volume2 size={14} className="animate-pulse" /> : <Play size={13} />}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                            {previewingVoice === v.id ? <Volume2 size={14} className="animate-pulse" /> : <Play size={13} />}
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ) : null
-                )}
+                  </div>
+                ))}
               </div>
-            )}
-          </GlassCard>
-        )}
+            </>
+          ) : (
+            <>
+              <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-1">Voice</h2>
+              <p className="text-xs text-ink/40">
+                Voice replies aren't set up yet. Ask the app admin to add a free ElevenLabs API key as{' '}
+                <code className="text-gold">VITE_ELEVENLABS_API_KEY</code> — free tier: ~10,000 characters/month, no card needed.
+                Get a key at <span className="text-gold">elevenlabs.io</span>.
+              </p>
+            </>
+          )}
+        </GlassCard>
 
         <GlassCard className="p-6 mb-6">
           <h2 className="text-sm font-medium text-ink/50 uppercase tracking-wide mb-3">Language</h2>

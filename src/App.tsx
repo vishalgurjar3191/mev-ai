@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import SplashScreen from './components/common/SplashScreen';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -26,7 +26,7 @@ export default function App() {
   return (
     <AuthProvider>
       {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -41,9 +41,9 @@ export default function App() {
           <Route path="/dashboard/settings" element={<Protected><Settings /></Protected>} />
           <Route path="/dashboard/admin" element={<Protected><Admin /></Protected>} />
 
-                    <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

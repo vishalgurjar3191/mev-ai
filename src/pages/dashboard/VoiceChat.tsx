@@ -4,7 +4,8 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import GlassCard from '../../components/common/GlassCard';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../hooks/useChat';
-import { createRecognizer, speakWithProfile, stopSpeaking, isSpeechRecognitionSupported, isSpeechSynthesisSupported, VOICE_LANGUAGES } from '../../lib/voice';
+import { createRecognizer, isSpeechRecognitionSupported, VOICE_LANGUAGES } from '../../lib/voice';
+import { speakSavedVoice, stopSpeaking } from '../../lib/ttsClient';
 
 export default function VoiceChat() {
   const { firebaseUser, profile } = useAuth();
@@ -13,11 +14,12 @@ export default function VoiceChat() {
   const [transcript, setTranscript] = useState('');
   const [speakEnabled, setSpeakEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
   const recognizerRef = useRef<SpeechRecognition | null>(null);
 
   const { messages, isStreaming, sendMessage } = useChat(firebaseUser?.uid, [], null, undefined, { persist: false });
 
-  const supported = isSpeechRecognitionSupported() && isSpeechSynthesisSupported();
+  const supported = isSpeechRecognitionSupported();
 
   // Speak the assistant's reply once it finishes streaming.
   const lastMessage = messages[messages.length - 1];
@@ -25,7 +27,11 @@ export default function VoiceChat() {
     if (!speakEnabled) return;
     if (lastMessage?.role === 'assistant' && !isStreaming && lastMessage.content && !lastMessage.error) {
       setIsSpeaking(true);
-      speakWithProfile(lastMessage.content, lang, profile?.preferredVoice, () => setIsSpeaking(false));
+      setVoiceError('');
+      speakSavedVoice(lastMessage.content, profile?.preferredVoice, () => setIsSpeaking(false)).catch((err) => {
+        setIsSpeaking(false);
+        setVoiceError((err as Error).message);
+      });
     }
   }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -109,6 +115,10 @@ export default function VoiceChat() {
         <p className="text-ink/40 text-sm mt-6 min-h-[20px]">
           {listening ? transcript || 'Listening...' : isStreaming ? 'Thinking...' : isSpeaking ? 'Speaking...' : 'Tap to speak'}
         </p>
+
+        {voiceError && (
+          <p className="text-xs text-gold/80 mt-2 text-center max-w-sm">{voiceError}</p>
+        )}
 
         {lastMessage && (
           <GlassCard className="w-full mt-10 p-6">

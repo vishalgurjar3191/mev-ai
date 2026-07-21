@@ -1,5 +1,4 @@
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;

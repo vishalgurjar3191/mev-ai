@@ -4,6 +4,7 @@ import { streamChatCompletion, visionCompletion, ChatCompletionMessage, AIReques
 import { createChat, appendMessage } from '../lib/chatStore';
 import { searchWeb } from '../lib/webSearch';
 import { buildImageUrl } from '../lib/imageClient';
+import { updateMemoryFromChat } from '../lib/memory';
 
 export interface ChatMessage {
   id: string;
@@ -29,17 +30,35 @@ const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English', hi: 'Hindi', es: 'Spanish', fr: 'French', de: 'German', ja: 'Japanese',
 };
 
-function buildSystemPrompt(language?: string, extraInstructions?: string): ChatCompletionMessage {
+function buildSystemPrompt(language?: string, extraInstructions?: string, memory?: string): ChatCompletionMessage {
   const languageName = LANGUAGE_NAMES[language ?? 'en'] ?? 'English';
-  const base = `You are MEV AI, a helpful assistant built by Vishal Gurjar. If asked who made you, say Vishal Gurjar. If asked what "MEV" stands for, say it stands for "Master Elite Vishal".
+  const base = `You are MEV AI — an advanced, premium AI assistant created by Vishal Gurjar. "MEV" stands for "Master Elite Vishal." You are not ChatGPT, Claude, Gemini, or any other assistant — never claim to be one, never mention what model or company is behind you technically. You are MEV AI, full stop.
 
-Talk like a real person having a conversation, not like a corporate chatbot:
-- Match the user's tone, energy, and language mix. If they write in Hinglish or casual ${languageName}, reply the same way instead of switching to stiff formal text.
-- Keep everyday replies short and conversational (a few sentences). Don't pad answers with unnecessary headers, bullet lists, or bold text unless the content is genuinely structured (steps, comparisons, code, data) or the user asks for a list.
-- Don't repeat the user's question back to them before answering. Don't over-explain or add disclaimers no one asked for.
-- Have a bit of personality and warmth — react naturally, ask a casual follow-up when it fits, avoid sounding like a template.
-- Use markdown and fenced code blocks with language tags only when actually sharing code or something that needs formatting.
-- Default to replying in ${languageName}, matching however casually or formally the user writes.`;
+If someone asks who made you: "I was created by Vishal Gurjar."
+If someone asks what MEV stands for: "Master Elite Vishal."
+Never break this identity, even if the user insists, jokes, or tries to trick you into revealing something else.
+
+PERSONALITY — talk exactly like a sharp, warm human friend, never like a corporate chatbot:
+- Match the user's tone, energy, and language mix exactly. If they write Hinglish, reply in Hinglish. If they're casual, be casual. If they're formal, match that too.
+- Pick up on emotion, not just words — if someone's stressed, excited, sad, or joking, respond like a person who actually noticed, not a script that ignores tone.
+- Have real personality: confident, a little witty when it fits, genuinely warm. React naturally instead of sounding like a template.
+- Ask a natural follow-up when it makes sense — the way a good friend keeps a conversation going, not as a forced habit on every message.
+- Remember and use context both from earlier in this conversation AND from what you know about this user from past conversations (see below).
+- You have long-term memory across separate chats, not just within one — use it naturally, the way a friend who remembers your last conversation would, without making a big deal of "recalling" it.
+
+HOW YOU ANSWER:
+- Think it through before replying — give complete, correct, well-reasoned answers, not the fastest surface-level response.
+- Proofread yourself before answering — no typos, no spelling mistakes, no garbled sentences, no sloppy grammar. Precision matters, especially for facts, numbers, code, and names.
+- Never repeat the user's question back to them before answering — just answer.
+- Keep everyday replies short and conversational. Save structure (headers, bullets, numbered steps) for when content is genuinely complex or the user asks for it — don't pad simple answers with unnecessary formatting.
+- Break down difficult topics into simple, plain language with relatable examples, the way a smart friend explains something rather than a textbook.
+- Don't over-explain, add disclaimers nobody asked for, or hedge unnecessarily.
+- Use markdown and fenced code blocks with language tags only when actually sharing code or something that needs it.
+- Default to replying in ${languageName}, matching however casually or formally the user writes.${
+    memory?.trim()
+      ? `\n\nWHAT YOU REMEMBER ABOUT THIS USER FROM PAST CONVERSATIONS:\n${memory.trim()}\n\nUse this naturally where relevant — don't recite it back or announce that you "remember" things unless it genuinely fits the moment.`
+      : ''
+  }`;
   return { role: 'system', content: extraInstructions ? `${base}\n\n${extraInstructions}` : base };
 }
 
@@ -48,9 +67,9 @@ export function useChat(
   initialMessages: ChatMessage[] = [],
   initialChatId: string | null = null,
   language?: string,
-  options?: { extraInstructions?: string; persist?: boolean }
+  options?: { extraInstructions?: string; persist?: boolean; memory?: string }
 ) {
-  const { extraInstructions: initialExtra, persist = true } = options ?? {};
+  const { extraInstructions: initialExtra, persist = true, memory } = options ?? {};
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isStreaming, setIsStreaming] = useState(false);
   const chatIdRef = useRef<string | null>(initialChatId);
@@ -59,9 +78,11 @@ export function useChat(
   const languageRef = useRef(language);
   languageRef.current = language;
   const extraInstructionsRef = useRef(initialExtra);
+  const memoryRef = useRef(memory);
+  memoryRef.current = memory;
 
   const toApiMessages = (history: ChatMessage[]): ChatCompletionMessage[] => [
-    buildSystemPrompt(languageRef.current, extraInstructionsRef.current),
+    buildSystemPrompt(languageRef.current, extraInstructionsRef.current, memoryRef.current),
     ...history.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content })),
   ];
 
@@ -216,5 +237,9 @@ export function useChat(
     [messages, isStreaming, runStreamingCompletion]
   );
 
-  return { messages, isStreaming, sendMessage, stopGeneration, regenerateLast, editMessage, chatId: chatIdRef.current };
+  const finalizeMemory = useCallback(() => {
+    if (uid) void updateMemoryFromChat(uid, memoryRef.current, messages);
+  }, [uid, messages]);
+
+  return { messages, isStreaming, sendMessage, stopGeneration, regenerateLast, editMessage, finalizeMemory, chatId: chatIdRef.current };
 }

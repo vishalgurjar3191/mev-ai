@@ -73,13 +73,12 @@ export default function VoiceModeOverlay({ messages, isStreaming, sendMessage, p
 
     setState('speaking');
     void speak(
-      last.content.replace(/[#*_`]/g, ''), // strip markdown symbols so they aren't read aloud
-      language,
-      () => {
-        if (activeRef.current) startListening();
-      },
-      { voiceURI: preferredVoice }
-    );
+  last.content.replace(/[#*_`]/g, ''),
+  preferredVoice,
+  () => {
+    if (activeRef.current) startListening();
+  }
+);
   }, [isStreaming, messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

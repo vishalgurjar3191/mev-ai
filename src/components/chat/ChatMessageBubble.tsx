@@ -5,8 +5,7 @@ import rehypeHighlight from 'rehype-highlight';
 import { Copy, Check, Pencil, RotateCcw, User, AlertCircle, Volume2, VolumeX, Download, Loader2 } from 'lucide-react';
 import Logo from '../common/Logo';
 import { ChatMessage } from '../../hooks/useChat';
-import { speakWithProfile, stopSpeaking, isSpeechSynthesisSupported } from '../../lib/voice';
-import { downloadRealisticAudio } from '../../lib/ttsClient';
+import { stopSpeaking, downloadRealisticAudio, speakSavedVoice } from '../../lib/ttsClient';
 import { useAuth } from '../../context/AuthContext';
 
 interface CodeBlockProps {
@@ -65,17 +64,16 @@ function ChatMessageBubbleBase({ message, isLast, isStreaming, onRegenerate, onE
   };
 
   const handleSpeakToggle = () => {
-    if (!isSpeechSynthesisSupported()) {
-      alert("This browser doesn't support text-to-speech. Try the latest Chrome.");
-      return;
-    }
     if (speaking) {
       stopSpeaking();
       setSpeaking(false);
       return;
     }
     setSpeaking(true);
-    speakWithProfile(message.content, navigator.language || 'en-US', profile?.preferredVoice, () => setSpeaking(false));
+    speakSavedVoice(message.content, profile?.preferredVoice, () => setSpeaking(false)).catch((err) => {
+      setSpeaking(false);
+      alert((err as Error).message);
+    });
   };
 
   const handleDownloadMp3 = async () => {

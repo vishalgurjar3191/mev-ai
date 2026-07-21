@@ -5,6 +5,31 @@ export interface ChatCompletionMessage {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+/**
+ * Simple non-streaming completion — used for background tasks (like summarizing a chat into
+ * long-term memory) where we just need one final string back, not a live stream.
+ */
+export async function oneShotTextCompletion(messages: ChatCompletionMessage[]): Promise<string> {
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  const model = import.meta.env.VITE_OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
+  if (!apiKey) throw new AIRequestError('AI Chat is not configured yet.');
+
+  const response = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'MEV AI',
+    },
+    body: JSON.stringify({ model, messages, stream: false, temperature: 0.3 }),
+  });
+
+  if (!response.ok) throw new AIRequestError(`Request failed (${response.status})`);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
 export class AIRequestError extends Error {}
 
 /**

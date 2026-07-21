@@ -110,7 +110,7 @@ export default function ChatComposer({ onSend, onStop, isStreaming }: Props) {
   };
 
   return (
-    <div className="glass-strong rounded-2xl p-2.5">
+    <div className="glass-strong rounded-3xl p-2.5 shadow-premium">
       {attachment && (
         <div className="flex items-center gap-2 mb-2 px-2">
           <div className="flex items-center gap-2 glass rounded-lg px-3 py-1.5 text-xs text-ink/70">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
@@ -66,12 +66,23 @@ function ChatBody({
   initialChatId: string | null;
 }) {
   const { profile } = useAuth();
-  const { messages, isStreaming, sendMessage, stopGeneration, regenerateLast, editMessage } = useChat(
+  const { messages, isStreaming, sendMessage, stopGeneration, regenerateLast, editMessage, finalizeMemory } = useChat(
     uid,
     initialMessages,
     initialChatId,
-    profile?.language
+    profile?.language,
+    { memory: profile?.memory }
   );
+
+  const finalizeMemoryRef = useRef(finalizeMemory);
+  finalizeMemoryRef.current = finalizeMemory;
+
+  useEffect(() => {
+    // Saves what MEV AI learned in this chat to the user's long-term memory whenever they
+    // leave it (new chat, switch chats, close the app) — this is what makes cross-chat
+    // memory work without needing an explicit "save" action from the user.
+    return () => finalizeMemoryRef.current();
+  }, []);
 
   useEffect(() => {
     const el = document.getElementById('chat-scroll-area');

@@ -6,6 +6,7 @@ import GoogleIcon from '../../components/common/GoogleIcon';
 import { useAuth } from '../../context/AuthContext';
 import { isValidEmail, passwordStrength, friendlyFirebaseError, sanitizeInput } from '../../utils/validators';
 import { AuthFormErrors } from '../../types';
+import { isNativeApp } from '../../lib/platform';
 
 interface FirebaseErrorLike {
   code?: string;
@@ -143,10 +144,16 @@ export default function Register() {
         <div className="h-px bg-ink/10 flex-1" />
       </div>
 
-      <button onClick={handleGoogle} disabled={googleLoading} className="btn-ghost w-full flex items-center justify-center gap-3 disabled:opacity-60">
-        {googleLoading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
-        Continue with Google
-      </button>
+      {isNativeApp() ? (
+        <p className="text-center text-ink/40 text-xs">
+          Google Sign-Up isn't available in the app yet — please use email &amp; password. (Works fine on the website.)
+        </p>
+      ) : (
+        <button onClick={handleGoogle} disabled={googleLoading} className="btn-ghost w-full flex items-center justify-center gap-3 disabled:opacity-60">
+          {googleLoading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
+          Continue with Google
+        </button>
+      )}
 
       <p className="text-center text-ink/40 text-sm mt-8">
         Already have an account? <Link to="/login" className="text-gold hover:underline">Log in</Link>

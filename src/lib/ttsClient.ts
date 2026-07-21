@@ -75,6 +75,34 @@ export function stopRealisticSpeech(): void {
   }
 }
 
+/** Public alias — stops whatever reply is currently being read aloud. */
+export function stopSpeaking(): void {
+  stopRealisticSpeech();
+}
+
+/**
+ * Speaks a reply using the user's saved voice choice (from Settings). Throws a clear, friendly
+ * error if no ElevenLabs voice is configured — callers should catch this and tell the user to
+ * set one up in Settings, rather than silently doing nothing or falling back to a robotic voice.
+ */
+export async function speakSavedVoice(text: string, preferredVoiceJson: string | undefined, onEnd?: () => void): Promise<void> {
+  let elevenLabsVoiceId: string | undefined;
+  if (preferredVoiceJson) {
+    try {
+      elevenLabsVoiceId = (JSON.parse(preferredVoiceJson) as { elevenLabsVoiceId?: string }).elevenLabsVoiceId;
+    } catch {
+      // ignore malformed stored value
+    }
+  }
+  if (!elevenLabsVoiceId) {
+    if (!hasElevenLabsKey()) {
+      throw new Error("Realistic Voice isn't set up yet. Ask the app admin to add an ElevenLabs API key (see ADMIN_SETUP.md).");
+    }
+    throw new Error('Pick a voice first — go to Settings → Realistic Voice and choose one.');
+  }
+  await speakRealistic(text, elevenLabsVoiceId, onEnd);
+}
+
 /**
  * Speaks text using ElevenLabs. Throws a friendly Error on failure (missing key, quota
  * exceeded, network issue) so the caller can fall back to browser TTS.
@@ -119,3 +147,4 @@ export async function speakRealistic(text: string, elevenLabsVoiceId: string, on
   };
   await audio.play();
 }
+
